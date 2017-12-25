@@ -80,7 +80,13 @@ devices = {
   'MAG': { 'pin_pwr':'D18',
            'pin_int':'D17',
            'pin_sda':'D20',
-           'pin_scl':'D19' }
+           'pin_scl':'D19' },
+  'GPRS' : {'pin_tx' : 'D12', 'pin_rx' : 'D20', 'pin_reset' : 'D14', 'pin_pwrkey' : 'D15', 'pin_pwron' : 'D6'},
+  'GPS' : {'pin_tx' : 'D9', 'pin_rx' : 'D8', 'pin_standby' : 'D7', 'pin_pwron' : 'D10', 'pin_reset' : 'D31'},
+  'BME' : {'pin_cs' : 'D2', 'pin_sdi' : 'D3', 'pin_sck': 'D4', 'pin_sdo' : 'D5'},
+  'LIS2MDL' : {'pin_scl' : 'D11', 'pin_sda': 'D13', 'pin_int' : 'D16'},
+  'LIS3DH' : {'pin_scl' : 'D18', 'pin_sda' : 'D19', 'pin_int1' : 'D25', 'pin_res' : 'D26', 'pin_int2' : 'D27'},
+  'OPT'  : {'pin_sda' : '21', 'pin_scl' : 'D23', 'pin_int' : 'D22'}
   # Pin D22 is used for clock when driving neopixels - as not specifying a pin seems to break things
 };
 
@@ -162,7 +168,7 @@ def get_pins():
   pinutils.findpin(pins, "PD26", True)["functions"]["LIS3DH_RES"]=0;
   pinutils.findpin(pins, "PD21", True)["functions"]["OPT_SDA"]=0;
   pinutils.findpin(pins, "PD23", True)["functions"]["OPT_SCL"]=0;
-  pinutils.findpin(pins, "PD27", True)["functions"]["OPT_INT"]=0; 
+  pinutils.findpin(pins, "PD22", True)["functions"]["OPT_INT"]=0; 
   
   
   # everything is non-5v tolerant

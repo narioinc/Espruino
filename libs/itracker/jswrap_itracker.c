@@ -15,7 +15,7 @@
  */
 
 
-#include "jswrap_puck.h"
+#include "jswrap_itracker.h"
 #include "jsinteractive.h"
 #include "jsdevices.h"
 #include "jshardware.h"

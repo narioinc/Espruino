@@ -8,7 +8,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  *
  * ----------------------------------------------------------------------------
- * Contains JavaScript interface for Puck.js
+ * Contains JavaScript interface for Itracker
  * ----------------------------------------------------------------------------
  */
 #include "jspin.h"
