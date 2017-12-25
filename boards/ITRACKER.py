@@ -144,9 +144,18 @@ def get_pins():
   pinutils.findpin(pins, "PD28", True)["functions"]["ADC1_IN4"]=0;
   pinutils.findpin(pins, "PD28", True)["functions"]["USART1_TX"]=0;
   pinutils.findpin(pins, "PD29", True)["functions"]["USART1_RX"]=0;
-  pinutils.findpin(pins, "PD29", True)["functions"]["ADC1_IN5"]=0;
-  pinutils.findpin(pins, "PD30", True)["functions"]["ADC1_IN6"]=0;
-  pinutils.findpin(pins, "PD31", True)["functions"]["ADC1_IN7"]=0;
+  pinutils.findpin(pins, "PD12", True)["functions"]["GPRS_TX"]=0;
+  pinutils.findpin(pins, "PD20", True)["functions"]["GPRS_RX"]=0;
+  pinutils.findpin(pins, "PD14", True)["functions"]["GPRS_RESET"]=0;
+  pinutils.findpin(pins, "PD15", True)["functions"]["GPRS_PWRKEY"]=0;
+  pinutils.findpin(pins, "PD6", True)["functions"]["GPRS_PWN_ON"]=0;
+  pinutils.findpin(pins, "PD9", True)["functions"]["GPS_TX"]=0;
+  pinutils.findpin(pins, "PD8", True)["functions"]["GPS_RX"]=0;
+  pinutils.findpin(pins, "PD7", True)["functions"]["GPS_STANDBY"]=0;
+  pinutils.findpin(pins, "PD10", True)["functions"]["GPS_PWR_ON"]=0;
+  pinutils.findpin(pins, "PD31", True)["functions"]["GPS_RESET"]=0;
+  pinutils.findpin(pins, "PD8", True)["functions"]["GPS_RX"]=0;
+  
   # everything is non-5v tolerant
   for pin in pins:
     pin["functions"]["3.3"]=0;
