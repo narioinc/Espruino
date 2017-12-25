@@ -135,12 +135,6 @@ def get_pins():
   pins = pinutils.generate_pins(0,31) # 32 General Purpose I/O Pins.
   pinutils.findpin(pins, "PD0", True)["functions"]["XL1"]=0;
   pinutils.findpin(pins, "PD1", True)["functions"]["XL2"]=0;
-  pinutils.findpin(pins, "PD9", True)["functions"]["NFC1"]=0;
-  pinutils.findpin(pins, "PD10", True)["functions"]["NFC2"]=0;
-  pinutils.findpin(pins, "PD2", True)["functions"]["ADC1_IN0"]=0;
-  pinutils.findpin(pins, "PD3", True)["functions"]["ADC1_IN1"]=0;
-  pinutils.findpin(pins, "PD4", True)["functions"]["ADC1_IN2"]=0;
-  pinutils.findpin(pins, "PD5", True)["functions"]["ADC1_IN3"]=0;
   pinutils.findpin(pins, "PD28", True)["functions"]["ADC1_IN4"]=0;
   pinutils.findpin(pins, "PD28", True)["functions"]["USART1_TX"]=0;
   pinutils.findpin(pins, "PD29", True)["functions"]["USART1_RX"]=0;
@@ -154,7 +148,22 @@ def get_pins():
   pinutils.findpin(pins, "PD7", True)["functions"]["GPS_STANDBY"]=0;
   pinutils.findpin(pins, "PD10", True)["functions"]["GPS_PWR_ON"]=0;
   pinutils.findpin(pins, "PD31", True)["functions"]["GPS_RESET"]=0;
-  pinutils.findpin(pins, "PD8", True)["functions"]["GPS_RX"]=0;
+  pinutils.findpin(pins, "PD2", True)["functions"]["BME_CS"]=0;
+  pinutils.findpin(pins, "PD3", True)["functions"]["BME_SDI"]=0;
+  pinutils.findpin(pins, "PD4", True)["functions"]["BME_SCK"]=0;
+  pinutils.findpin(pins, "PD5", True)["functions"]["BME_SDO"]=0;
+  pinutils.findpin(pins, "PD11", True)["functions"]["LIS2MDL_SCL"]=0;
+  pinutils.findpin(pins, "PD13", True)["functions"]["LIS2MDL_SDA"]=0;
+  pinutils.findpin(pins, "PD16", True)["functions"]["LIS2MDL_INT"]=0;
+  pinutils.findpin(pins, "PD18", True)["functions"]["LIS3DH_SCL"]=0;
+  pinutils.findpin(pins, "PD19", True)["functions"]["LIS3DH_SDA"]=0;
+  pinutils.findpin(pins, "PD25", True)["functions"]["LIS3DH_INT1"]=0;
+  pinutils.findpin(pins, "PD27", True)["functions"]["LIS3DH_INT2"]=0;
+  pinutils.findpin(pins, "PD26", True)["functions"]["LIS3DH_RES"]=0;
+  pinutils.findpin(pins, "PD21", True)["functions"]["OPT_SDA"]=0;
+  pinutils.findpin(pins, "PD23", True)["functions"]["OPT_SCL"]=0;
+  pinutils.findpin(pins, "PD27", True)["functions"]["OPT_INT"]=0; 
+  
   
   # everything is non-5v tolerant
   for pin in pins:
