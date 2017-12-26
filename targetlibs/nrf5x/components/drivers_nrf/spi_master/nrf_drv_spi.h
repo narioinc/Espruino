@@ -33,6 +33,19 @@
 extern "C" {
 #endif
 
+#ifndef SPI0_USE_EASY_DMA
+#define SPI0_USE_EASY_DMA 1
+#endif
+
+#ifndef SPI1_USE_EASY_DMA
+#define SPI1_USE_EASY_DMA 1
+#endif
+
+#ifndef SPI2_USE_EASY_DMA
+#define SPI2_USE_EASY_DMA 1
+#endif
+
+
 #if defined(SPIM_PRESENT)
     #define NRF_DRV_SPI_PERIPHERAL(id)           \
         (CONCAT_3(SPI, id, _USE_EASY_DMA) == 1 ? \

@@ -29,11 +29,6 @@ info = {
    'optimizeflags' : '-Os',
    'libraries' : [
      'BLUETOOTH',
-     'NET',
-     'GRAPHICS',
-     'CRYPTO',
-     'NFC',
-     'NEOPIXEL'
      #'HASHLIB'
      #'FILESYSTEM'
      #'TLS'
@@ -44,6 +39,7 @@ info = {
      'DFU_PRIVATE_KEY=targets/nrf5x_dfu/dfu_private_key.pem',
      'DFU_SETTINGS=--application-version 0xff --hw-version 52 --sd-req 0x8C',
      'INCLUDE += -I$(ROOT)/libs/itracker',
+     'TARGETSOURCES += libs/itracker/bme280.c',
      'WRAPPERSOURCES += libs/itracker/jswrap_itracker.c'
    ]
  }
@@ -70,17 +66,8 @@ chip = {
 };
 
 devices = {
-  'LED1' : { 'pin' : 'D5' },
-  'LED2' : { 'pin' : 'D4' },
-  'LED3' : { 'pin' : 'D3' },
-  'IR'   : { 'pin_anode' : 'D25', 'pin_cathode' : 'D26' },
-  'BTN1' : { 'pin' : 'D0', 'pinstate' : 'IN_PULLDOWN' },
-  'CAPSENSE' : { 'pin_rx' : 'D11', 'pin_tx' : 'D12' },
-  'NFC': { 'pin_a':'D9', 'pin_b':'D10' },
-  'MAG': { 'pin_pwr':'D18',
-           'pin_int':'D17',
-           'pin_sda':'D20',
-           'pin_scl':'D19' },
+'LED1' : { 'pin' : 'D5' },
+'BTN1' : { 'pin' : 'D0', 'pinstate' : 'IN_PULLDOWN' },
   'GPRS' : {'pin_tx' : 'D12', 'pin_rx' : 'D20', 'pin_reset' : 'D14', 'pin_pwrkey' : 'D15', 'pin_pwron' : 'D6'},
   'GPS' : {'pin_tx' : 'D9', 'pin_rx' : 'D8', 'pin_standby' : 'D7', 'pin_pwron' : 'D10', 'pin_reset' : 'D31'},
   'BME' : {'pin_cs' : 'D2', 'pin_sdi' : 'D3', 'pin_sck': 'D4', 'pin_sdo' : 'D5'},
@@ -168,9 +155,9 @@ def get_pins():
   pinutils.findpin(pins, "PD26", True)["functions"]["LIS3DH_RES"]=0;
   pinutils.findpin(pins, "PD21", True)["functions"]["OPT_SDA"]=0;
   pinutils.findpin(pins, "PD23", True)["functions"]["OPT_SCL"]=0;
-  pinutils.findpin(pins, "PD22", True)["functions"]["OPT_INT"]=0; 
-  
-  
+  pinutils.findpin(pins, "PD22", True)["functions"]["OPT_INT"]=0;
+
+
   # everything is non-5v tolerant
   for pin in pins:
     pin["functions"]["3.3"]=0;
