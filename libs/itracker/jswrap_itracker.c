@@ -96,6 +96,48 @@
 #define             LIS2MDL_INT_PIN                            16
 #define             LIS2MDL_ADDR                               0x1E
 
+#define             GSM_PWR_ON_PIN                        6
+#define             GSM_TXD_PIN                           12
+#define             GSM_RESET_PIN                         14
+#define             GSM_PWRKEY_PIN                        15
+#define             GSM_RXD_PIN                           20
+
+/*
+GSM Pin
+RX  -- 20
+TX  -- 12
+
+*/
+#define             GSM_PWR_ON_PIN                        6
+#define             GSM_TXD_PIN                           12
+#define             GSM_RESET_PIN                         14
+#define             GSM_PWRKEY_PIN                        15
+#define             GSM_RXD_PIN                           20
+#define             GSM_PWR_ON                                nrf_gpio_pin_write ( GSM_PWR_ON_PIN, 1 )
+#define             GSM_PWR_OFF                               nrf_gpio_pin_write ( GSM_PWR_ON_PIN, 0 )
+#define             GSM_PWRKEY_HIGH                           nrf_gpio_pin_write ( GSM_PWRKEY_PIN, 0 )
+#define             GSM_PWRKEY_LOW                            nrf_gpio_pin_write ( GSM_PWRKEY_PIN, 1 )
+#define             GSM_RESET_HIGH                            nrf_gpio_pin_write ( GSM_RESET_PIN, 0 )
+#define             GSM_RESET_LOW                             nrf_gpio_pin_write ( GSM_RESET_PIN, 1 )
+
+/*
+
+GPS Pins
+RX  --  9
+TX  --  8
+
+*/
+
+#define             GPS_STANDBY_PIN                        7
+#define             GPS_TXD_PIN                            8
+#define             GPS_RXD_PIN                            9
+#define 						GPS_PWR_ON_PIN											   10
+#define             GPS_RESET_PIN                          31
+#define             GPS_PWR_ON                                nrf_gpio_pin_write ( GPS_PWR_ON_PIN, 1 )
+#define             GPS_PWR_OFF                               nrf_gpio_pin_write ( GPS_PWR_ON_PIN, 0 )
+#define             GPS_RESET_HIGH                            nrf_gpio_pin_write ( GPS_RESET_PIN, 1 )
+#define             GPS_RESET_LOW                             nrf_gpio_pin_write ( GPS_RESET_PIN, 0 )
+
 // Has the magnetometer been turned on?
 // bool mag_enabled = false;
 // int16_t mag_reading[3];  //< magnetometer xyz reading
@@ -629,4 +671,63 @@ JsVar *jswrap_itracker_lis2mdldata()
   obj = lis2mdl_to_xyz(magnetic_mG);
   lis2mdl_deinit();
   return obj;
+}
+
+void Gsm_Gpio_Init()
+{
+		nrf_gpio_cfg_output(GSM_PWR_ON_PIN);
+		nrf_gpio_cfg_output(GSM_RESET_PIN);
+    nrf_gpio_cfg_output(GSM_PWRKEY_PIN);
+}
+
+void Gps_Gpio_Init()
+{
+		nrf_gpio_cfg_output(GPS_PWR_ON_PIN);
+		nrf_gpio_cfg_output(GPS_RESET_PIN);
+}
+
+
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "iTracker",
+    "name" : "gsmon",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_itracker_gsmon"
+}*/
+void jswrap_itracker_gsmon()
+{
+    Gsm_Gpio_Init();
+    //DPRINTF(LOG_DEBUG,"GMS_PowerUp\r\n");
+    GSM_PWR_OFF;
+    nrf_delay_ms(200);
+    //Pwr en wait at least 30ms
+    GSM_PWR_ON;
+    nrf_delay_ms(200);
+    //Pwr key low to high at least 2S
+    GSM_PWRKEY_LOW;
+    nrf_delay_ms(2000); //2s
+    GSM_PWRKEY_HIGH;
+    nrf_delay_ms(1000);
+
+}
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "iTracker",
+    "name" : "gsmoff",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_itracker_gsmoff"
+}*/
+
+void jswrap_itracker_gsmoff()
+{
+    //Gsm_Gpio_Init();
+    /*//DPRINTF(LOG_DEBUG,"GMS_PowerDown\r\n");
+    GSM_PWD_LOW;
+    nrf_delay_ms(800); //800ms     600ms > t >1000ms
+    GSM_PWD_HIGH;
+    nrf_delay_ms(12000); //12s
+	  GSM_PWR_EN_DISABLE;
+    nrf_delay_ms(2000);*/
 }

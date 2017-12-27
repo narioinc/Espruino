@@ -13,8 +13,14 @@
  */
 #include "jspin.h"
 
+//Sensor functions
 
 JsVar *jswrap_itracker_bme280data();
 JsVar *jswrap_itracker_opt3001data();
 JsVar *jswrap_itracker_lis3dhdata();
 JsVar *jswrap_itracker_lis2mdldata();
+
+//GSM functions
+
+void jswrap_itracker_gsmon();
+void jswrap_itracker_gsmoff();
