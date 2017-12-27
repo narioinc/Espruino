@@ -29,10 +29,11 @@
 #include "nrf5x_utils.h"
 #include "nrf_drv_spi.h"
 #include "app_util_platform.h"
-#include "bme280_driver.h"
+#include "bme280/bme280_driver.h"
 #include "itracker_i2c_drv.h"
-#include "opt3001_driver.h"
-#include "lis3dh_driver.h"
+#include "opt3001/opt3001_driver.h"
+#include "lis3dh/lis3dh_driver.h"
+#include "lis2mdl/lis2mdl_driver.h"
 
 #ifndef NRF52
 #define NFR52 1
@@ -83,6 +84,17 @@
 #define             LIS3DH_ADDR                            0x19
 
 
+/*
+		lis2mdl PIN Assignment
+		LIS2MDL_SCL		--	P0.11
+		LIS2MDL_SDA		--	P0.13
+		LIS2MDL_INT		--	P0.16
+
+*/
+#define             LIS2MDL_TWI_SCL_PIN                        11
+#define             LIS2MDL_TWI_SDA_PIN                        13
+#define             LIS2MDL_INT_PIN                            16
+#define             LIS2MDL_ADDR                               0x1E
 
 // Has the magnetometer been turned on?
 // bool mag_enabled = false;
@@ -343,7 +355,7 @@ JsVar *jswrap_itracker_opt3001data()
       jsvObjectSetChildAndUnLock(obj,"l",jsvNewFromInteger(light_data));
       nrf_delay_ms(1000);
 		}
-
+    opt3001_deinit();
     return obj;
 }
 
@@ -450,7 +462,171 @@ JsVar *jswrap_itracker_lis3dhdata()
 				}
 		}
 		obj = lis3dh_to_xyz(data);
-
+    lis3dh_deinit();
     return obj;
 
+}
+
+lis2mdl_ctx_t dev_ctx;
+
+static uint32_t lis2mdl_twi_init(void)
+{
+    uint32_t err_code;
+
+    const nrf_drv_twi_config_t twi_lis_config = {
+       .scl                = LIS2MDL_TWI_SCL_PIN,
+       .sda                = LIS2MDL_TWI_SDA_PIN,
+       .frequency          = NRF_TWI_FREQ_400K,
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGHEST
+    };
+
+    err_code = itracker_i2c_init(&twi_lis_config);
+    if(err_code != NRF_SUCCESS)
+	  {
+		    return err_code;
+	  }
+
+	  return NRF_SUCCESS;
+}
+
+static int32_t platform_write(void *handle, uint8_t Reg, uint8_t *Bufp,
+                              uint16_t len)
+{
+    uint32_t err_code;
+		err_code = itracker_i2c_write(LIS2MDL_ADDR, Reg, Bufp, len);
+    return err_code;
+}
+
+
+static int32_t platform_read(void *handle, uint8_t Reg, uint8_t *Bufp,
+                             uint16_t len)
+{
+		uint32_t err_code;
+		err_code = itracker_i2c_read(LIS2MDL_ADDR, Reg, Bufp, len);
+    return err_code;
+}
+
+
+uint32_t lis2mdl_init(void)
+{
+    uint32_t err_code;
+
+	  //��ʼ��TWI
+	  err_code = lis2mdl_twi_init();
+    if(err_code != NRF_SUCCESS) return err_code;
+
+		/*
+		 *  Initialize mems driver interface
+		 */
+
+		dev_ctx.write_reg = platform_write;
+		dev_ctx.read_reg = platform_read;
+
+    return NRF_SUCCESS;
+}
+
+void lis2mdl_deinit()
+{
+		itracker_i2c_deinit();
+}
+
+/*!
+* @brief This API converts compensated sensor data to a JSON object
+*/
+JsVar *lis2mdl_to_xyz(int16_t magnetic_mG[]) {
+  JsVar *obj = jsvNewObject();
+  if (!obj) return 0;
+  jsvObjectSetChildAndUnLock(obj,"x",jsvNewFromInteger(magnetic_mG[0]));
+  jsvObjectSetChildAndUnLock(obj,"y",jsvNewFromInteger(magnetic_mG[1]));
+  jsvObjectSetChildAndUnLock(obj,"z",jsvNewFromInteger(magnetic_mG[2]));
+
+  return obj;
+}
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "iTracker",
+    "name" : "lis2mdldata",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_itracker_lis2mdldata",
+    "return" : ["JsVar", "get sensor reading from LIS2MDL sensor" ]
+}*/
+
+JsVar *jswrap_itracker_lis2mdldata()
+{
+	axis3bit16_t data_raw_magnetic;
+	axis1bit16_t data_raw_temperature;
+	float magnetic_mG[3];
+	float temperature_degC;
+	uint8_t whoamI, rst;
+  JsVar *obj = jsvNewObject();
+
+  lis2mdl_init();
+
+	 /*
+   *  Check device ID
+   */
+  whoamI = 0;
+  lis2mdl_device_id_get(&dev_ctx, &whoamI);
+  if ( whoamI != LIS2MDL_ID )
+    while(1); /*manage here device not found */
+	/*
+   *  Restore default configuration
+   */
+  lis2mdl_reset_set(&dev_ctx, PROPERTY_ENABLE);
+  do {
+    lis2mdl_reset_get(&dev_ctx, &rst);
+  } while (rst);
+  /*
+   *  Enable Block Data Update
+   */
+  lis2mdl_block_data_update_set(&dev_ctx, PROPERTY_ENABLE);
+  /*
+   * Set Output Data Rate
+   */
+  lis2mdl_data_rate_set(&dev_ctx, LIS2MDL_ODR_10Hz);
+  /*
+   * Set / Reset sensor mode
+   */
+  lis2mdl_set_rst_mode_set(&dev_ctx, LIS2MDL_SENS_OFF_CANC_EVERY_ODR);
+  /*
+   * Enable temperature compensation
+   */
+  lis2mdl_offset_temp_comp_set(&dev_ctx, PROPERTY_ENABLE);
+  /*
+   * Set device in continuos mode
+   */
+  lis2mdl_operating_mode_set(&dev_ctx, LIS2MDL_CONTINUOUS_MODE);
+
+  /*
+   * Read samples in polling mode (no int)
+   */
+	uint8_t cnt=10;
+	uint8_t valid=0;
+  while(cnt-- || valid==0)
+  {
+    /*
+     * Read output only if new value is available
+     */
+    lis2mdl_reg_t reg;
+    lis2mdl_status_get(&dev_ctx, &reg.status_reg);
+
+    if (reg.status_reg.zyxda)
+    {
+      /* Read magnetic field data */
+      memset(data_raw_magnetic.u8bit, 0x00, 3*sizeof(int16_t));
+      lis2mdl_magnetic_raw_get(&dev_ctx, data_raw_magnetic.u8bit);
+      magnetic_mG[0] = LIS2MDL_FROM_LSB_TO_mG( data_raw_magnetic.i16bit[0]);
+      magnetic_mG[1] = LIS2MDL_FROM_LSB_TO_mG( data_raw_magnetic.i16bit[1]);
+      magnetic_mG[2] = LIS2MDL_FROM_LSB_TO_mG( data_raw_magnetic.i16bit[2]);
+
+      //sprintf((char*)buf, "%4.2f\t%4.2f\t%4.2f\r\n", magnetic_mG[0], magnetic_mG[1], magnetic_mG[2]);
+      //DPRINTF(LOG_INFO, "%s", buf);
+			valid = 1;
+
+    }
+  }
+  obj = lis2mdl_to_xyz(magnetic_mG);
+  lis2mdl_deinit();
+  return obj;
 }
