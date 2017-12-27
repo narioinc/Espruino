@@ -29,7 +29,13 @@
 #include "nrf5x_utils.h"
 #include "nrf_drv_spi.h"
 #include "app_util_platform.h"
-//#include "jswrap_flash.h" // for jsfRemoveCodeFromFlash
+#include "itracker_i2c_drv.h"
+#include "sensor_opt3001.h"
+
+#ifndef NRF52
+#define NFR52 1
+#endif
+
 
 /*
 		bme280 PIN Assignment
@@ -39,21 +45,26 @@
 		BME_SDO		--	P0.05
 
 */
-
-#ifndef NRF52
-#define NFR52 1
-#endif
-
 #define             BME280_SPI_CS_PIN                         2
 #define             BME280_SPI_SDI_PIN                        3
 #define             BME280_SPI_SCK_PIN                        4
 #define             BME280_SPI_SDO_PIN                        5
 #define             I2C_TIMEOUT                               100000
 
+/*
+		OPT3001 PIN Assignment
+		OPT_SDA		--	P0.21
+		OPT_INT		--	P0.22
+		OPT_SCL		--	P0.23
 
+*/
+#define             OPT3001_TWI_SDA_PIN                        21
+#define             OPT3001_INT_PIN                        		 22
+#define             OPT3001_TWI_SCL_PIN                        23
+#define             OPT3001_ADDR                               0x44
 // Has the magnetometer been turned on?
-//bool mag_enabled = false;
-//int16_t mag_reading[3];  //< magnetometer xyz reading
+// bool mag_enabled = false;
+// int16_t mag_reading[3];  //< magnetometer xyz reading
 
 
 #define SPI_CS_PIN   25  /* nRF52832ֻ��ʹ��GPIO��ΪƬѡ��������������������SPI CS�ܽ�.*/
@@ -183,6 +194,7 @@ JsVar *bme_to_pht(struct bme280_data *comp_data) {
   jsvObjectSetChildAndUnLock(obj,"p",jsvNewFromInteger(comp_data->pressure));
   jsvObjectSetChildAndUnLock(obj,"h",jsvNewFromInteger(comp_data->humidity));
   jsvObjectSetChildAndUnLock(obj,"t",jsvNewFromInteger(comp_data->temperature));
+
   return obj;
 }
 
@@ -206,7 +218,7 @@ Class containing [iTracker's] utility functions.
  * @brief This API reads the pressure, temperature and humidity data from the
  * sensor, compensates the data.
  */
-JsVar jswrap_itracker_bme280data(){
+JsVar *jswrap_itracker_bme280data(){
   struct bme280_dev dev;
   int8_t rslt = BME280_OK;
   JsVar *obj = jsvNewObject();
@@ -239,14 +251,76 @@ JsVar jswrap_itracker_bme280data(){
   	rslt = bme280_set_sensor_settings(settings_sel, &dev);
   	rslt = bme280_set_sensor_mode(BME280_NORMAL_MODE, &dev);
 
-  	//printf("Temperature, Pressure, Humidity\r\n");
-  	//while (1) {
-  		/* Delay while the sensor completes a measurement */
-  		//dev->delay_ms(70);
-  		rslt = bme280_get_sensor_data(BME280_ALL, &comp_data, &dev);
-      obj = bme_to_pht(&comp_data);
-      //print_sensor_data(&comp_data);
-  	//}
+  	rslt = bme280_get_sensor_data(BME280_ALL, &comp_data, &dev);
+    obj = bme_to_pht(&comp_data);
 
-  	//return rslt;
+    return obj;
+}
+
+static uint32_t opt3001_twi_init(void)
+{
+    uint32_t err_code;
+
+    const nrf_drv_twi_config_t twi_config = {
+       .scl                = OPT3001_TWI_SCL_PIN,
+       .sda                = OPT3001_TWI_SDA_PIN,
+       .frequency          = NRF_TWI_FREQ_400K,
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGHEST
+    };
+
+    err_code = itracker_i2c_init(&twi_config);
+    if(err_code != NRF_SUCCESS)
+	  {
+		    return err_code;
+	  }
+
+	  return NRF_SUCCESS;
+}
+
+uint32_t opt3001_init(void)
+{
+    uint32_t err_code;
+	  uint8_t id =0;
+
+		//init i2c
+	  err_code = opt3001_twi_init();
+    if(err_code != NRF_SUCCESS) return err_code;
+
+		sensorOpt3001Enable(1);
+		sensorOpt3001Test();
+    return NRF_SUCCESS;
+}
+
+void opt3001_deinit()
+{
+		itracker_i2c_deinit();
+}
+
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "iTracker",
+    "name" : "opt3001data",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_itracker_opt3001data",
+    "return" : ["JsVar", "get sensor reading from OPT 3001 sensor" ]
+}*/
+
+JsVar *jswrap_itracker_opt3001data()
+{
+		int count = 1;
+		uint16_t light_raw_data=0;
+    JsVar *obj = jsvNewObject();
+
+    opt3001_init();
+
+		while(count--)
+		{
+			sensorOpt3001Read(&light_raw_data);
+			float light_data = sensorOpt3001Convert(light_raw_data);
+      jsvObjectSetChildAndUnLock(obj,"l",jsvNewFromInteger(light_data));
+      nrf_delay_ms(1000);
+		}
+
+    return obj;
 }

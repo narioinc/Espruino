@@ -14,4 +14,5 @@
 #include "jspin.h"
 #include "bme280.h"
 
-JsVar jswrap_itracker_bme280data();
+JsVar *jswrap_itracker_bme280data();
+JsVar *jswrap_itracker_opt3001data();
