@@ -39,7 +39,7 @@ info = {
      'DFU_PRIVATE_KEY=targets/nrf5x_dfu/dfu_private_key.pem',
      'DFU_SETTINGS=--application-version 0xff --hw-version 52 --sd-req 0x8C',
      'INCLUDE += -I$(ROOT)/libs/itracker',
-     'TARGETSOURCES += libs/itracker/bme280.c libs/itracker/itracker_i2c_drv.c libs/itracker/sensor_opt3001.c',
+     'TARGETSOURCES += libs/itracker/bme280_driver.c libs/itracker/itracker_i2c_drv.c libs/itracker/opt3001_driver.c libs/itracker/lis3dh_driver.c',
      'WRAPPERSOURCES += libs/itracker/jswrap_itracker.c'
    ]
  }
