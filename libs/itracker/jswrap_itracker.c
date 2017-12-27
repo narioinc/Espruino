@@ -145,6 +145,10 @@ TX  --  8
 // bool mag_enabled = false;
 // int16_t mag_reading[3];  //< magnetometer xyz reading
 
+void err(const char *s) {
+  jsiConsolePrintf("ERRO -- : %s\n", s);
+}
+
 
 #define SPI_CS_PIN   25  /* nRF52832ֻ��ʹ��GPIO��ΪƬѡ��������������������SPI CS�ܽ�.*/
 #define SPI_BUFSIZE 8
@@ -170,7 +174,7 @@ void spi_event_handler(nrf_drv_spi_evt_t const * p_event)
 static uint32_t bme280_spi_init(void)
 {
     uint32_t err_code;
-        nrf_drv_spi_config_t spi_bme_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+    nrf_drv_spi_config_t spi_bme_config = NRF_DRV_SPI_DEFAULT_CONFIG;
     spi_bme_config.ss_pin   = BME280_SPI_CS_PIN;
     spi_bme_config.miso_pin = BME280_SPI_SDO_PIN;
     spi_bme_config.mosi_pin = BME280_SPI_SDI_PIN;
@@ -180,7 +184,8 @@ static uint32_t bme280_spi_init(void)
     err_code = nrf_drv_spi_init(&spi, &spi_bme_config, spi_event_handler);
     if(err_code != NRF_SUCCESS)
 	  {
-		    return err_code;
+        err("BME280: Error while SPI Init");
+        return err_code;
 	  }
 
 	  return NRF_SUCCESS;
@@ -269,7 +274,7 @@ int8_t user_spi_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint1
 */
 JsVar *bme_to_pht(struct bme280_data *comp_data) {
   JsVar *obj = jsvNewObject();
-  if (!obj) return 0;
+
   jsvObjectSetChildAndUnLock(obj,"p",jsvNewFromInteger(comp_data->pressure));
   jsvObjectSetChildAndUnLock(obj,"h",jsvNewFromInteger(comp_data->humidity));
   jsvObjectSetChildAndUnLock(obj,"t",jsvNewFromInteger(comp_data->temperature));
@@ -311,6 +316,9 @@ JsVar *jswrap_itracker_bme280data(){
   dev.delay_ms = user_delay_ms;
 
   rslt = bme280_init(&dev);
+  if(rslt != BME280_OK) {
+    err("BME280 problem during device init");
+  }
 
   	uint8_t settings_sel;
   	struct bme280_data comp_data;
@@ -328,9 +336,23 @@ JsVar *jswrap_itracker_bme280data(){
   	settings_sel |= BME280_STANDBY_SEL;
   	settings_sel |= BME280_FILTER_SEL;
   	rslt = bme280_set_sensor_settings(settings_sel, &dev);
+
+    if(rslt != BME280_OK){
+      err("BME280: issue while applying sensor settings");
+    }
+
   	rslt = bme280_set_sensor_mode(BME280_NORMAL_MODE, &dev);
 
+    if(rslt != BME280_OK){
+      err("BME280: issue while setting sensor mode");
+    }
+
   	rslt = bme280_get_sensor_data(BME280_ALL, &comp_data, &dev);
+
+    if(rslt != BME280_OK){
+      err("BME280: issue while getting sensor data");
+    }
+
     obj = bme_to_pht(&comp_data);
 
     return obj;
@@ -350,7 +372,7 @@ static uint32_t opt3001_twi_init(void)
     err_code = itracker_i2c_init(&twi_config);
     if(err_code != NRF_SUCCESS)
 	  {
-		    return err_code;
+        return err_code;
 	  }
 
 	  return NRF_SUCCESS;
@@ -363,10 +385,12 @@ uint32_t opt3001_init(void)
 
 		//init i2c
 	  err_code = opt3001_twi_init();
-    if(err_code != NRF_SUCCESS) return err_code;
-
+    if(err_code != NRF_SUCCESS) {
+      err("OPT3001: issue while running init for the sensor");
+      return err_code;
+    }
 		sensorOpt3001Enable(1);
-		sensorOpt3001Test();
+		//sensorOpt3001Test();
     return NRF_SUCCESS;
 }
 
@@ -387,7 +411,7 @@ void opt3001_deinit()
 
 JsVar *jswrap_itracker_opt3001data()
 {
-		int count = 1;
+		int count = 2;
 		uint16_t light_raw_data=0;
     JsVar *obj = jsvNewObject();
 
@@ -397,7 +421,7 @@ JsVar *jswrap_itracker_opt3001data()
 		{
 			sensorOpt3001Read(&light_raw_data);
 			float light_data = sensorOpt3001Convert(light_raw_data);
-      jsvObjectSetChildAndUnLock(obj,"l",jsvNewFromInteger(light_data));
+      jsvObjectSetChildAndUnLock(obj,"l",jsvNewFromFloat(light_data));
       nrf_delay_ms(1000);
 		}
     opt3001_deinit();
@@ -432,7 +456,10 @@ uint32_t lis3dh_init(void)
 
 	  //��ʼ��TWI
 	  err_code = lis3dh_twi_init();
-    if(err_code != NRF_SUCCESS) return err_code;
+    if(err_code != NRF_SUCCESS) {
+      err("LIS3DH: issue while running init for the sensor");
+      return err_code;
+    }
 
     return NRF_SUCCESS;
 }
@@ -476,23 +503,23 @@ JsVar *jswrap_itracker_lis3dhdata()
 		//Inizialize MEMS Sensor
 		//set ODR (turn ON device)
 		response = LIS3DH_SetODR(LIS3DH_ODR_100Hz);
-		if(response==1){
-			//DPRINTF(LOG_INFO,"%s", "\n\rSET_ODR_OK    \n\r\0");
+		if(response!=1){
+      err("LIS3DH: error while setting ODR");
 		}
 		//set PowerMode
 		response = LIS3DH_SetMode(LIS3DH_NORMAL);
-		if(response==1){
-			//DPRINTF(LOG_INFO,"%s", "SET_MODE_OK     \n\r\0");
+		if(response!=1){
+      err("LIS3DH: error while setting mode");
 		}
 		//set Fullscale
 		response = LIS3DH_SetFullScale(LIS3DH_FULLSCALE_2);
-		if(response==1){
-			//DPRINTF(LOG_INFO,"%s", "SET_FULLSCALE_OK\n\r\0");
+		if(response!=1){
+      err("LIS3DH: error while setting full scale");
 		}
 		//set axis Enable
 		response = LIS3DH_SetAxis(LIS3DH_X_ENABLE | LIS3DH_Y_ENABLE | LIS3DH_Z_ENABLE);
-		if(response==1){
-			//DPRINTF(LOG_INFO,"%s", "SET_AXIS_OK     \n\r\0");
+		if(response!=1){
+      err("LIS3DH: error while setting Axis enable");
 		}
 
 		uint8_t cnt=10;
@@ -504,7 +531,9 @@ JsVar *jswrap_itracker_lis3dhdata()
 				{
 						//DPRINTF(LOG_INFO,"X=%6d Y=%6d Z=%6d \r\n", data.AXIS_X, data.AXIS_Y, data.AXIS_Z);
 						old_position = position;
-				}
+				}else{
+          err("LIS3DH: error while getting axis data");
+        }
 		}
 		obj = lis3dh_to_xyz(data);
     lis3dh_deinit();
@@ -558,8 +587,10 @@ uint32_t lis2mdl_init(void)
 
 	  //��ʼ��TWI
 	  err_code = lis2mdl_twi_init();
-    if(err_code != NRF_SUCCESS) return err_code;
-
+    if(err_code != NRF_SUCCESS) {
+      err("LIS2MDL: error while running init for sensor");
+      return err_code;
+    }
 		/*
 		 *  Initialize mems driver interface
 		 */
@@ -664,9 +695,6 @@ JsVar *jswrap_itracker_lis2mdldata()
       magnetic_mG[0] = LIS2MDL_FROM_LSB_TO_mG( data_raw_magnetic.i16bit[0]);
       magnetic_mG[1] = LIS2MDL_FROM_LSB_TO_mG( data_raw_magnetic.i16bit[1]);
       magnetic_mG[2] = LIS2MDL_FROM_LSB_TO_mG( data_raw_magnetic.i16bit[2]);
-
-      //sprintf((char*)buf, "%4.2f\t%4.2f\t%4.2f\r\n", magnetic_mG[0], magnetic_mG[1], magnetic_mG[2]);
-      //DPRINTF(LOG_INFO, "%s", buf);
 			valid = 1;
 
     }
