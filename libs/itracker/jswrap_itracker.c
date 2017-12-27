@@ -160,6 +160,7 @@ void err(const char *s) {
 uint8_t   SPI_Tx_Buf[SPI_BUFSIZE];
 uint8_t   SPI_Rx_Buf[SPI_BUFSIZE];
 volatile  uint8_t   SPIReadLength, SPIWriteLength;
+bool BME280_INIT = false;
 static volatile bool spi_xfer_done;  /**< Flag used to indicate that SPI instance completed the transfer. */
 static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
 /**
@@ -182,12 +183,14 @@ static uint32_t bme280_spi_init(void)
     spi_bme_config.sck_pin  = BME280_SPI_SCK_PIN;
 
     //set SPI transfer mode as blocking
-    err_code = nrf_drv_spi_init(&spi, &spi_bme_config, NULL);
+    if(!BME280_INIT) err_code = nrf_drv_spi_init(&spi, &spi_bme_config, NULL);
     if(err_code != NRF_SUCCESS)
 	  {
         err("BME280: Error while SPI Init");
         return err_code;
-	  }
+	  }else{
+      BME280_INIT = TRUE;
+    }
 
 	  return NRF_SUCCESS;
 }
@@ -320,7 +323,7 @@ JsVar *jswrap_itracker_bme280data(){
   if(rslt != BME280_OK) {
     err("BME280 problem during device init");
   }
-
+  
   	uint8_t settings_sel;
   	struct bme280_data comp_data;
 
