@@ -76,8 +76,8 @@
 		LIS3DH_INT2		--	P0.27
 
 */
-#define             LIS3DH_TWI_SCL_PIN                     16
-#define             LIS3DH_TWI_SDA_PIN                     15
+#define             LIS3DH_TWI_SCL_PIN                     18
+#define             LIS3DH_TWI_SDA_PIN                     19
 #define             LIS3DH_INT1_PIN                        25
 #define 						LIS3DH_RES_PIN											   26
 #define             LIS3DH_INT2_PIN                        27
@@ -119,6 +119,9 @@ TX  -- 12
 #define             GSM_PWRKEY_LOW                            nrf_gpio_pin_write ( GSM_PWRKEY_PIN, 1 )
 #define             GSM_RESET_HIGH                            nrf_gpio_pin_write ( GSM_RESET_PIN, 0 )
 #define             GSM_RESET_LOW                             nrf_gpio_pin_write ( GSM_RESET_PIN, 1 )
+#define             GSM_PWD_PIN                        14
+#define             GSM_PWD_LOW                      nrf_gpio_pin_write ( GSM_PWD_PIN , 1 )
+#define             GSM_PWD_HIGH                     nrf_gpio_pin_write ( GSM_PWD_PIN , 0 )
 
 /*
 
@@ -722,12 +725,12 @@ void jswrap_itracker_gsmon()
 
 void jswrap_itracker_gsmoff()
 {
-    //Gsm_Gpio_Init();
-    /*//DPRINTF(LOG_DEBUG,"GMS_PowerDown\r\n");
+    Gsm_Gpio_Init();
+    //DPRINTF(LOG_DEBUG,"GMS_PowerDown\r\n");
     GSM_PWD_LOW;
     nrf_delay_ms(800); //800ms     600ms > t >1000ms
     GSM_PWD_HIGH;
     nrf_delay_ms(12000); //12s
-	  GSM_PWR_EN_DISABLE;
-    nrf_delay_ms(2000);*/
+	  GSM_PWRKEY_LOW;
+    nrf_delay_ms(2000);
 }
