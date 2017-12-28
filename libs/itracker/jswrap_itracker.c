@@ -53,7 +53,7 @@
 #define             BME280_SPI_SCK_PIN                        4
 #define             BME280_SPI_SDO_PIN                        5
 #define             I2C_TIMEOUT                               100000
-
+#define             BME280_FLOAT_ENABLE
 /*
 		OPT3001 PIN Assignment
 		OPT_SDA		--	P0.21
@@ -153,7 +153,7 @@ void err(const char *s) {
 #define SPI_CS_PIN   25  /* nRF52832ֻ��ʹ��GPIO��ΪƬѡ��������������������SPI CS�ܽ�.*/
 #define SPI_BUFSIZE 8
 
-#define SPI_INSTANCE  1 /**< SPI instance index. */
+#define SPI_INSTANCE  0 /**< SPI instance index. */
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -170,7 +170,6 @@ static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI i
 void spi_event_handler(nrf_drv_spi_evt_t const * p_event)
 {
     spi_xfer_done = true;
-    jsiConsolePrintf("SPI TRANSFER DONE");
 }
 
 static uint32_t bme280_spi_init(void)
@@ -183,7 +182,7 @@ static uint32_t bme280_spi_init(void)
     spi_bme_config.sck_pin  = BME280_SPI_SCK_PIN;
 
     //set SPI transfer mode as blocking
-    if(!BME280_INIT) err_code = nrf_drv_spi_init(&spi, &spi_bme_config, NULL);
+    if(!BME280_INIT) err_code = nrf_drv_spi_init(&spi, &spi_bme_config, spi_event_handler);
     if(err_code != NRF_SUCCESS)
 	  {
         err("BME280: Error while SPI Init");
@@ -231,7 +230,7 @@ int8_t user_spi_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16
 		/* Write transaction */
     SPI_Tx_Buf[0] = reg_addr;
     APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, SPI_Tx_Buf, 1, SPI_Rx_Buf, len+1));
-	  //while(spi_xfer_done == false);
+	  while(spi_xfer_done == false);
     /* Send received value back to the caller */
     memcpy(reg_data, &SPI_Rx_Buf[1], len);
 		nrf_gpio_pin_write ( BME280_SPI_CS_PIN, 1 );
@@ -267,7 +266,7 @@ int8_t user_spi_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint1
 		memcpy(&SPI_Tx_Buf[1], reg_data, len);
 		nrf_gpio_pin_write ( BME280_SPI_CS_PIN, 0 );
     APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, SPI_Tx_Buf, len+1, NULL, 0));
-	  //while(spi_xfer_done == false);
+	  while(spi_xfer_done == false);
 		nrf_gpio_pin_write ( BME280_SPI_CS_PIN, 1 );
     return rslt;
 }
@@ -279,9 +278,9 @@ int8_t user_spi_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint1
 JsVar *bme_to_pht(struct bme280_data *comp_data) {
   JsVar *obj = jsvNewObject();
 
-  jsvObjectSetChildAndUnLock(obj,"p",jsvNewFromInteger(comp_data->pressure));
-  jsvObjectSetChildAndUnLock(obj,"h",jsvNewFromInteger(comp_data->humidity));
-  jsvObjectSetChildAndUnLock(obj,"t",jsvNewFromInteger(comp_data->temperature));
+  jsvObjectSetChildAndUnLock(obj,"p",jsvNewFromFloat(comp_data->pressure));
+  jsvObjectSetChildAndUnLock(obj,"h",jsvNewFromFloat(comp_data->humidity));
+  jsvObjectSetChildAndUnLock(obj,"t",jsvNewFromFloat(comp_data->temperature));
 
   return obj;
 }
@@ -323,7 +322,7 @@ JsVar *jswrap_itracker_bme280data(){
   if(rslt != BME280_OK) {
     err("BME280 problem during device init");
   }
-  
+
   	uint8_t settings_sel;
   	struct bme280_data comp_data;
 
