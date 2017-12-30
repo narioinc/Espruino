@@ -103,6 +103,7 @@
 #define             GSM_RXD_PIN                           20
 
 /*
+
 GSM Pin
 RX  -- 20
 TX  -- 12
@@ -743,6 +744,7 @@ void jswrap_itracker_gsmon()
     nrf_delay_ms(2000); //2s
     GSM_PWRKEY_HIGH;
     nrf_delay_ms(1000);
+    jsinteractive("gsm switched on\n");
 
 }
 
@@ -764,4 +766,36 @@ void jswrap_itracker_gsmoff()
     nrf_delay_ms(12000); //12s
 	  GSM_PWRKEY_LOW;
     nrf_delay_ms(2000);
+    jsinteractive("gsm switched off\n");
+}
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "iTracker",
+    "name" : "gpson",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_itracker_gpson"
+}*/
+void jswrap_itracker_gpson(){
+  Gps_Gpio_Init();
+  GPS_PWR_OFF;
+  nrf_delay_ms(1000);
+  GPS_PWR_ON;
+  jsinteractive("gps switched on\n");
+}
+
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "iTracker",
+    "name" : "gpsoff",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_itracker_gpsoff"
+}*/
+void jswrap_itracker_gpsoff(){
+  Gps_Gpio_Init();
+  GPS_PWR_ON;
+  nrf_delay_ms(1000);
+  GPS_PWR_OFF;
+  jsinteractive("gps switched off\n");
 }

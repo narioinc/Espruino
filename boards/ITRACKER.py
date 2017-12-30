@@ -52,7 +52,7 @@ chip = {
   'ram' : 64,
   'flash' : 512,
   'speed' : 64,
-  'usart' : 1,
+  'usart' : 3,
   'spi' : 3,
   'i2c' : 2,
   'adc' : 1,

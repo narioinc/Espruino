@@ -24,3 +24,8 @@ JsVar *jswrap_itracker_lis2mdldata();
 
 void jswrap_itracker_gsmon();
 void jswrap_itracker_gsmoff();
+
+//GPS functions
+
+void jswrap_itracker_gpson();
+void jswrap_itracker_gpsoff();
