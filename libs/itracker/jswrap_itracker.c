@@ -744,7 +744,7 @@ void jswrap_itracker_gsmon()
     nrf_delay_ms(2000); //2s
     GSM_PWRKEY_HIGH;
     nrf_delay_ms(1000);
-    jsinteractive("gsm switched on\n");
+    jsiConsolePrintf("gsm switched on\n");
 
 }
 
@@ -766,7 +766,7 @@ void jswrap_itracker_gsmoff()
     nrf_delay_ms(12000); //12s
 	  GSM_PWRKEY_LOW;
     nrf_delay_ms(2000);
-    jsinteractive("gsm switched off\n");
+    jsiConsolePrintf("gsm switched off\n");
 }
 
 /*JSON{
@@ -781,7 +781,7 @@ void jswrap_itracker_gpson(){
   GPS_PWR_OFF;
   nrf_delay_ms(1000);
   GPS_PWR_ON;
-  jsinteractive("gps switched on\n");
+  jsiConsolePrintf("gps switched on\n");
 }
 
 
@@ -797,5 +797,5 @@ void jswrap_itracker_gpsoff(){
   GPS_PWR_ON;
   nrf_delay_ms(1000);
   GPS_PWR_OFF;
-  jsinteractive("gps switched off\n");
+  jsiConsolePrintf("gps switched off\n");
 }
