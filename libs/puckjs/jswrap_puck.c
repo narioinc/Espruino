@@ -342,7 +342,7 @@ Puck.on('mag', function(xyz) {
 
 This call will be ignored if the sampling is already on.
 
-If given an argument, the sample rate is set (if not, it's at 0.63 Hz). 
+If given an argument, the sample rate is set (if not, it's at 0.63 Hz).
 The sample rate must be one of the following (resulting in the given power consumption):
 
 * 80 Hz - 900uA
@@ -476,13 +476,13 @@ void jswrap_puck_IR(JsVar *data, Pin cathode, Pin anode) {
 }
 Capacitive sense - the higher the capacitance, the higher the number returned.
 
-If called without arguments, a value depending on the capacitance of what is 
+If called without arguments, a value depending on the capacitance of what is
 attached to pin D11 will be returned. If you attach a length of wire to D11,
 you'll be able to see a higher value returned when your hand is near the wire
 than when it is away.
 
 You can also supply pins to use yourself, however if you do this then
-the TX pin must be connected to RX pin and sense plate via a roughly 1MOhm 
+the TX pin must be connected to RX pin and sense plate via a roughly 1MOhm
 resistor.
 
 When not supplying pins, Puck.js uses an internal resistor between D12(tx)
