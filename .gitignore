@@ -41,3 +41,5 @@ targetlibs/nrf5x/examples
 /CURRENT_BOARD.make
 /topreadonly
 /topstrings
+
+makeandflash\.sh
