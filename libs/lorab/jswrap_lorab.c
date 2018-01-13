@@ -210,6 +210,12 @@ static TimerEvent_t Led3Timer;
  */
 static bool NextTx = true;
 
+/*
+Indicates if user has chosen OTAA or ABP
+*/
+bool isOtaa = true;
+
+
 /*!
  * Device states
  */
@@ -225,6 +231,7 @@ static enum eDeviceState
     DEVICE_STATE_CYCLE,
     DEVICE_STATE_SLEEP
 } DeviceState, WakeUpState;
+
 
 /*!
  * LoRaWAN compliance tests support data
@@ -242,6 +249,13 @@ struct ComplianceTest_s
     uint8_t DemodMargin;
     uint8_t NbGateways;
 } ComplianceTest;
+
+void convertKey(uint8_t* skey, char * _skey, uint8_t len){
+	for(int i = 0; i < len; i++){
+		skey[i] = (_skey[(i*2) + 1] >= 'A' && _skey[(i*2) + 1] <= 'F') ? (_skey[(i*2) + 1] - 'A' + 10) : (_skey[(i*2) + 1] >= 'a' && _skey[(i*2) + 1] <= 'f') ? (_skey[(i*2) + 1] - 'a' + 10) : (_skey[(i*2) + 1] - '0');
+		skey[i] += (_skey[(i*2)] >= 'A' && _skey[(i*2)] <= 'F') ? ((_skey[(i*2)] - 'A' + 10) << 4) : (_skey[(i*2)] >= 'a' && _skey[(i*2)] <= 'f') ? ((_skey[(i*2)] - 'a' + 10) << 4) : ((_skey[(i*2)] - '0') << 4);
+	}
+}
 
 /*!
  * \brief   Prepares the payload of the frame
@@ -997,7 +1011,342 @@ int main( void )
             {
 				NRF_LOG_DEBUG("DEVICE_STATE_JOIN\r\n");
 
-#if ( OVER_THE_AIR_ACTIVATION != 0 )
+#if ( isOtaa )
+
+				NRF_LOG_DEBUG("Over-the-Air activation\r\n");
+
+                MlmeReq_t mlmeReq;
+
+                // Initialize LoRaMac device unique ID
+                BoardGetUniqueId( DevEui );
+
+                mlmeReq.Type = MLME_JOIN;
+
+                mlmeReq.Req.Join.DevEui = DevEui;
+                mlmeReq.Req.Join.AppEui = AppEui;
+                mlmeReq.Req.Join.AppKey = AppKey;
+                mlmeReq.Req.Join.NbTrials = 3;
+
+                if ( NextTx == true )
+                {
+                    LoRaMacMlmeRequest( &mlmeReq );
+                }
+                DeviceState = DEVICE_STATE_SLEEP;
+#else
+
+				NRF_LOG_DEBUG("Personalization activation\r\n");
+
+                // Choose a random device address if not already defined in Commissioning.h
+                if ( DevAddr == 0 )
+                {
+                    // Random seed initialization
+                    srand1( BoardGetRandomSeed( ) );
+
+                    // Choose a random device address
+                    DevAddr = randr( 0, 0x01FFFFFF );
+					NRF_LOG_DEBUG("DevAddr: ");
+					NRF_LOG_HEXDUMP_DEBUG(&DevAddr, sizeof(DevAddr));
+					NRF_LOG_DEBUG("\r\n");
+
+                }
+
+                mibReq.Type = MIB_NET_ID;
+                mibReq.Param.NetID = LORAWAN_NETWORK_ID;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                mibReq.Type = MIB_DEV_ADDR;
+                mibReq.Param.DevAddr = DevAddr;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                mibReq.Type = MIB_NWK_SKEY;
+                mibReq.Param.NwkSKey = NwkSKey;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                mibReq.Type = MIB_APP_SKEY;
+                mibReq.Param.AppSKey = AppSKey;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                mibReq.Type = MIB_NETWORK_JOINED;
+                mibReq.Param.IsNetworkJoined = true;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                DeviceState = DEVICE_STATE_REQ_BEACON_TIMING;
+#endif
+                break;
+            }
+            case DEVICE_STATE_REQ_BEACON_TIMING:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_REQ_BEACON_TIMING\r\n");
+                MlmeReq_t mlmeReq;
+
+                if ( NextTx == true )
+                {
+                    mlmeReq.Type = MLME_BEACON_TIMING;
+
+                    if ( LoRaMacMlmeRequest( &mlmeReq ) == LORAMAC_STATUS_OK )
+                    {
+                        WakeUpState = DEVICE_STATE_SEND;
+                    }
+                }
+                DeviceState = DEVICE_STATE_SEND;
+                break;
+            }
+            case DEVICE_STATE_BEACON_ACQUISITION:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_BEACON_ACQUISITION\r\n");
+                MlmeReq_t mlmeReq;
+
+                if ( NextTx == true )
+                {
+					NRF_LOG_DEBUG("LoRaMacMlmeRequest(MLME_BEACON_ACQUISITION)\r\n");
+                    mlmeReq.Type = MLME_BEACON_ACQUISITION;
+
+                    LoRaMacMlmeRequest( &mlmeReq );
+                    NextTx = false;
+                }
+                DeviceState = DEVICE_STATE_SEND;
+                break;
+            }
+            case DEVICE_STATE_REQ_PINGSLOT_ACK:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_REQ_PINGSLOT_ACK\r\n");
+
+                MlmeReq_t mlmeReq;
+
+                if ( NextTx == true )
+                {
+                    mlmeReq.Type = MLME_LINK_CHECK;
+                    LoRaMacMlmeRequest( &mlmeReq );
+
+                    mlmeReq.Type = MLME_PING_SLOT_INFO;
+                    mlmeReq.Req.PingSlotInfo.PingSlot.Fields.Periodicity = 0;
+                    mlmeReq.Req.PingSlotInfo.PingSlot.Fields.RFU = 0;
+
+                    if ( LoRaMacMlmeRequest( &mlmeReq ) == LORAMAC_STATUS_OK )
+                    {
+                        WakeUpState = DEVICE_STATE_SEND;
+                    }
+                }
+                DeviceState = DEVICE_STATE_SEND;
+                break;
+            }
+            case DEVICE_STATE_SEND:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_SEND\r\n");
+                if ( NextTx == true )
+                {
+                    PrepareTxFrame( AppPort );
+
+					NRF_LOG_DEBUG("SendFrame\r\n");
+                    NextTx = SendFrame( );
+                }
+                if ( ComplianceTest.Running == true )
+                {
+                    // Schedule next packet transmission
+                    TxDutyCycleTime = 5000; // 5000 ms
+                }
+                else
+                {
+                    // Schedule next packet transmission
+                    TxDutyCycleTime = APP_TX_DUTYCYCLE + randr( -APP_TX_DUTYCYCLE_RND, APP_TX_DUTYCYCLE_RND );
+                }
+                DeviceState = DEVICE_STATE_CYCLE;
+                break;
+            }
+            case DEVICE_STATE_CYCLE:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_CYCLE\r\n");
+                DeviceState = DEVICE_STATE_SLEEP;
+
+                // Schedule next packet transmission
+                TimerSetValue( &TxNextPacketTimer, TxDutyCycleTime );
+                TimerStart( &TxNextPacketTimer );
+                break;
+            }
+            case DEVICE_STATE_SLEEP:
+            {
+                // Wake up through events
+                TimerLowPowerHandler( );
+                break;
+            }
+            default:
+            {
+                DeviceState = DEVICE_STATE_INIT;
+                break;
+            }
+        }
+    }
+}
+
+
+/*JSON{
+    "type": "class",
+    "class" : "LoraB"
+}
+*/
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "LoraB",
+    "name" : "joinotaa",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_lorab_joinotaa"
+}
+Return a light value based on the light the red LED is seeing.
+
+**Note:** If called more than 5 times per second, the received light value
+may not be accurate.
+*/
+void jswrap_lorab_joinotaa(JsVar *appEui,JsVar *appKey, JsVar *devEui){
+	isOtaa = true;
+  char * _appEui = (char *)appEui;
+  char * _appKey = (char *)appKey;
+  char * _devEui = (char *)devEui;
+  convertKey(AppEui, _appEui, 8);
+  convertKey(AppKey, _appKey, 8);
+	convertKey(DevEui, _devEui, 8);
+}
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "LoraB",
+    "name" : "joinabp",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_lorab_joinabp"
+}
+Return a light value based on the light the red LED is seeing.
+
+**Note:** If called more than 5 times per second, the received light value
+may not be accurate.
+*/
+void jswrap_lorab_joinabp(JsVar *devAddr, JsVar *nwkSKey, JsVar *appSKey){
+	isOtaa = false;
+  char * _nwkSKey = (char *)nwkSKey;
+  char * _appSKey = (char *)appSKey;
+  char * _devAddr = (char *)devAddr;
+  convertKey(DevAddr, _devAddr, 8);
+  convertKey(NwkSKey, _nwkSKey, 8);
+	convertKey(AppSKey, _appSKey, 8);
+}
+
+/*JSON{
+    "type" : "staticmethod",
+    "class" : "LoraB",
+    "name" : "send",
+    "ifdef" : "NRF52",
+    "generate" : "jswrap_lorab_send"
+}
+Return a light value based on the light the red LED is seeing.
+
+**Note:** If called more than 5 times per second, the received light value
+may not be accurate.
+*/
+void jswrap_lorab_send(JsVar *frame, JsVar *confirmed ){
+
+    LoRaMacPrimitives_t LoRaMacPrimitives;
+    LoRaMacCallback_t LoRaMacCallbacks;
+    MibRequestConfirm_t mibReq;
+
+    //char * _frame = (char *) frame;
+    //convertKey(AppData, _frame, sizeof(_frame));
+
+    //BoardInitMcu( );
+	  //BLE_init( );
+
+    DeviceState = DEVICE_STATE_INIT;
+    WakeUpState = DEVICE_STATE_SEND;
+
+    while( 1 )
+    {
+		BoardProcess( );
+
+        switch( DeviceState )
+        {
+            case DEVICE_STATE_INIT:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_INIT\r\n");
+
+                LoRaMacPrimitives.MacMcpsConfirm = McpsConfirm;
+                LoRaMacPrimitives.MacMcpsIndication = McpsIndication;
+                LoRaMacPrimitives.MacMlmeConfirm = MlmeConfirm;
+                LoRaMacPrimitives.MacMlmeIndication = MlmeIndication;
+                LoRaMacCallbacks.GetBatteryLevel = BoardGetBatteryLevel;
+                LoRaMacCallbacks.GetTemperatureLevel = NULL;
+
+#if defined( REGION_AS923 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_AS923 );
+#elif defined( REGION_AU915 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_AU915 );
+#elif defined( REGION_CN779 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_CN779 );
+#elif defined( REGION_EU868 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_EU868 );
+#elif defined( REGION_IN865 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_IN865 );
+#elif defined( REGION_KR920 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_KR920 );
+#elif defined( REGION_US915 )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_US915 );
+#elif defined( REGION_US915_HYBRID )
+                LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_US915_HYBRID );
+#else
+    //TODO: FOR NOW DEFAULTING TO INDIA SPECS
+    LoRaMacInitialization( &LoRaMacPrimitives, &LoRaMacCallbacks, LORAMAC_REGION_IN865 );
+    //#error "Please define a region in the compiler options."
+#endif
+                TimerInit( &TxNextPacketTimer, OnTxNextPacketTimerEvent );
+
+#ifdef LED_1
+                TimerInit( &Led1Timer, OnLed1TimerEvent );
+                TimerSetValue( &Led1Timer, 25 );
+#endif
+#ifdef LED_2
+                TimerInit( &Led2Timer, OnLed2TimerEvent );
+                TimerSetValue( &Led2Timer, 25 );
+#endif
+#ifdef LED_3
+                TimerInit( &Led3Timer, OnLed3TimerEvent );
+                TimerSetValue( &Led3Timer, 5000 );
+#endif
+
+                mibReq.Type = MIB_ADR;
+                mibReq.Param.AdrEnable = LORAWAN_ADR_ON;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                mibReq.Type = MIB_PUBLIC_NETWORK;
+                mibReq.Param.EnablePublicNetwork = LORAWAN_PUBLIC_NETWORK;
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+#if defined( REGION_EU868 )
+                LoRaMacTestSetDutyCycleOn( LORAWAN_DUTYCYCLE_ON );
+
+	#if ( USE_SEMTECH_DEFAULT_CHANNEL_LINEUP == 1 )
+                LoRaMacChannelAdd( 3, ( ChannelParams_t )LC4 );
+                LoRaMacChannelAdd( 4, ( ChannelParams_t )LC5 );
+                LoRaMacChannelAdd( 5, ( ChannelParams_t )LC6 );
+                LoRaMacChannelAdd( 6, ( ChannelParams_t )LC7 );
+                LoRaMacChannelAdd( 7, ( ChannelParams_t )LC8 );
+                LoRaMacChannelAdd( 8, ( ChannelParams_t )LC9 );
+                LoRaMacChannelAdd( 9, ( ChannelParams_t )LC10 );
+
+                mibReq.Type = MIB_RX2_DEFAULT_CHANNEL;
+                mibReq.Param.Rx2DefaultChannel = ( Rx2ChannelParams_t ){ 869525000, DR_3 };
+                LoRaMacMibSetRequestConfirm( &mibReq );
+
+                mibReq.Type = MIB_RX2_CHANNEL;
+                mibReq.Param.Rx2Channel = ( Rx2ChannelParams_t ){ 869525000, DR_3 };
+                LoRaMacMibSetRequestConfirm( &mibReq );
+	#endif
+
+#endif
+                DeviceState = DEVICE_STATE_JOIN;
+                break;
+            }
+            case DEVICE_STATE_JOIN:
+            {
+				NRF_LOG_DEBUG("DEVICE_STATE_JOIN\r\n");
+
+#if ( isOTA )
 
 				NRF_LOG_DEBUG("Over-the-Air activation\r\n");
 

@@ -14,3 +14,6 @@
 #include "jspin.h"
 
 //void jswrap_lorab_joinotaa();
+void jswrap_lorab_joinotaa(JsVar *appEui,JsVar *appKey, JsVar *devEui);
+void jswrap_lorab_joinabp(JsVar *devAddr, JsVar *nwkSKey, JsVar *appSKey);
+void jswrap_lorab_send(JsVar *frame, JsVar *confirmed );

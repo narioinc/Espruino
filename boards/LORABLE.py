@@ -17,7 +17,6 @@ import pinutils;
 
 info = {
  'name' : "LoraB",
- 'link' :  [ "http://www.espruino.com/PuckJS" ],
  'default_console' : "EV_SERIAL1",
  'default_console_tx' : "D28",
  'default_console_rx' : "D29",
